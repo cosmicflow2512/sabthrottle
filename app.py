@@ -154,11 +154,21 @@ def _gc_loop() -> None:
 
 # ---------- Background: Jellyfin polling -----------------------------------
 
+def _jellyfin_auth_header() -> str:
+    # Per Jellyfin API guidelines: prefer the Authorization header with the
+    # MediaBrowser scheme over the deprecated X-Emby-Token header.
+    # https://gist.github.com/nielsvanvelzen/ea047d9028f676185832e51ffaf12a6f
+    return (
+        f'MediaBrowser Token="{JELLYFIN_API_KEY}", '
+        f'Client="sabthrottle", Device="sabthrottle", '
+        f'DeviceId="sabthrottle", Version="1.0"'
+    )
+
 def _fetch_jellyfin_sessions() -> list[dict[str, Any]] | None:
     try:
         r = requests.get(
             f"{JELLYFIN_URL}/Sessions",
-            headers={"X-Emby-Token": JELLYFIN_API_KEY},
+            headers={"Authorization": _jellyfin_auth_header()},
             timeout=10,
         )
         r.raise_for_status()
