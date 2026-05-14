@@ -10,8 +10,17 @@
         <label>Leitungsgeschwindigkeit (Mbit/s)</label>
         <input type="number" name="line_speed_mbit" value="{{ settings.line_speed_mbit }}" min="0" step="1">
         <p class="muted" style="font-size:12px;margin:6px 0 0">
-          0 = unbekannt. Wird gebraucht, um Prozent-Regeln in absolute MB/s umzurechnen
-          und mit Mbit/MB-Regeln vergleichen zu können.
+          {% if settings.line_speed_mbit %}
+            Manuell gesetzt. 0 eintragen, um auf den Wert aus SABnzbd zurückzufallen.
+          {% elif detected_mbit %}
+            <span class="pill pill-info">auto</span>
+            Aktuell aus SABnzbd übernommen: <strong>{{ "%.0f"|format(detected_mbit) }} Mbit/s</strong>
+            ({{ "%.1f"|format(detected_kbps / 1000) }} MB/s).
+            Einen Wert eintragen, um das zu überschreiben.
+          {% else %}
+            0 = unbekannt. SABnzbd hat auch keinen <code>bandwidth_max</code> gesetzt —
+            Prozent-Regeln nutzen dann 1 Gbit/s als Referenz.
+          {% endif %}
         </p>
       </div>
     </div>

@@ -74,6 +74,30 @@ def format_limit(mode: str, value: float, line_speed_kbps: float | None) -> str:
     return f"{value} {mode}"
 
 
+def parse_sabnzbd_speed(value: str | None) -> float | None:
+    """Parse a SABnzbd-style speed string into KB/s.
+
+    SABnzbd accepts speeds like "100M" (100 MB/s), "800K" (800 KB/s),
+    a bare number (KB/s by convention), or empty (unlimited).
+    """
+    if not value:
+        return None
+    s = str(value).strip().upper().replace("B", "").replace(" ", "")
+    if not s:
+        return None
+    mult = 1.0
+    if s.endswith("G"):
+        mult, s = 1_000_000.0, s[:-1]
+    elif s.endswith("M"):
+        mult, s = 1_000.0, s[:-1]
+    elif s.endswith("K"):
+        mult, s = 1.0, s[:-1]
+    try:
+        return float(s) * mult
+    except ValueError:
+        return None
+
+
 def sabnzbd_value(mode: str, value: float) -> str:
     """Translate a (mode, value) pair to the string SABnzbd's speedlimit
     API expects.

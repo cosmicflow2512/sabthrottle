@@ -40,13 +40,22 @@ class Decision:
 
 
 def _line_speed_kbps(settings: dict[str, Any]) -> float:
-    """Return line speed in KB/s; falls back to 1 Gbit/s when unknown so
-    percent rules still have a finite reference (large enough that they
-    will only beat absolute rules that are themselves very loose)."""
+    """Return line speed in KB/s.
+
+    Priority:
+      1. User override `line_speed_mbit` (from WebUI settings)
+      2. Auto-detected `_detected_line_speed_kbps` (filled by caller from
+         SABnzbd's own `bandwidth_max` config)
+      3. 1 Gbit/s fallback — a generous default so percent rules still
+         have a finite reference even without any input.
+    """
     mbit = float(settings.get("line_speed_mbit") or 0)
-    if mbit <= 0:
-        mbit = 1000.0  # 1 Gbit/s — generous default
-    return units.mbit_to_kbps(mbit)
+    if mbit > 0:
+        return units.mbit_to_kbps(mbit)
+    detected = settings.get("_detected_line_speed_kbps")
+    if detected:
+        return float(detected)
+    return units.mbit_to_kbps(1000.0)
 
 
 def _rule_applies(rule: dict[str, Any], now: dt.datetime) -> bool:

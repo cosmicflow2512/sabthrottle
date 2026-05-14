@@ -92,6 +92,13 @@ def _tick() -> None:
     """One resolution cycle: poll Jellyfin, recompute, apply if changed."""
     sessions = jellyfin.active_sessions(NZBDAV_PATH_PREFIX) if jellyfin.ENABLED else []
     settings = storage.load_settings()
+    # If the user did not configure a line speed, fall back to whatever
+    # SABnzbd has set for bandwidth_max so percent ↔ absolute math still
+    # works out of the box.
+    if not settings.get("line_speed_mbit"):
+        detected = sabnzbd.get_max_speed_kbps()
+        if detected:
+            settings = {**settings, "_detected_line_speed_kbps": detected}
     rules    = storage.load_rules()
     decision = resolver.resolve(settings, rules, jellyfin_streams=len(sessions))
 
@@ -147,7 +154,9 @@ def api_status():
             "poll_interval_sec": JELLYFIN_POLL_INTERVAL,
         }
     settings = storage.load_settings()
-    line_kbps = settings.get("line_speed_mbit", 0) * 125 or None
+    line_kbps = _effective_line_speed_kbps(settings)
+    out["line_speed_kbps"]      = line_kbps
+    out["line_speed_source"]    = "user" if settings.get("line_speed_mbit") else ("sabnzbd" if line_kbps else "fallback")
     if decision:
         out.update(
             current_mode=decision.mode,
@@ -206,10 +215,17 @@ def _form_rule_from_request() -> dict:
     }
 
 
+def _effective_line_speed_kbps(settings: dict) -> float | None:
+    """Compute the line speed that the resolver would use, for display."""
+    if settings.get("line_speed_mbit"):
+        return float(settings["line_speed_mbit"]) * 125.0
+    return sabnzbd.get_max_speed_kbps()
+
+
 @app.route("/")
 def ui_index():
     settings = storage.load_settings()
-    line_kbps = settings.get("line_speed_mbit", 0) * 125 or None
+    line_kbps = _effective_line_speed_kbps(settings)
     with _state_lock:
         decision = _state["decision"]
         active_streams = _state["active_streams"]
@@ -282,7 +298,15 @@ def ui_settings():
         })
         _tick()
         return redirect(url_for("ui_settings"))
-    return render_template("settings.html", settings=storage.load_settings())
+    settings = storage.load_settings()
+    detected_kbps = sabnzbd.get_max_speed_kbps()
+    detected_mbit = (detected_kbps * 8 / 1000) if detected_kbps else None
+    return render_template(
+        "settings.html",
+        settings=settings,
+        detected_mbit=detected_mbit,
+        detected_kbps=detected_kbps,
+    )
 
 
 # ---------- Entrypoint -----------------------------------------------------
