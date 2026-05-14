@@ -4,10 +4,12 @@ services:
     container_name: sabthrottle
     restart: unless-stopped
     ports:
-      - "9999:9999"
+      - "6811:6811"
     environment:
-      SAB_URL: "http://sabnzbd:8080"
-      SAB_API_KEY: "CHANGE_ME"
+      SABNZBD_URL: "http://sabnzbd:8080"
+      SABNZBD_API_KEY: "CHANGE_ME"
+      JELLYFIN_URL: "http://jellyfin:8096"
+      JELLYFIN_API_KEY: "CHANGE_ME"
       THROTTLE_PERCENT: "50"
       FULL_PERCENT: "100"
       # WEBHOOK_TOKEN: "optional-shared-secret"

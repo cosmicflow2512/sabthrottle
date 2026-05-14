@@ -43,8 +43,8 @@ Alles per Environment-Variablen — siehe [`config.example.env`](config.example.
 
 | Variable | Pflicht | Default | Beschreibung |
 |---|---|---|---|
-| `SAB_URL` | ✓ | — | Base-URL deiner SABnzbd-Instanz |
-| `SAB_API_KEY` | ✓ | — | SABnzbd API-Key |
+| `SABNZBD_URL` | ✓ | — | Base-URL deiner SABnzbd-Instanz |
+| `SABNZBD_API_KEY` | ✓ | — | SABnzbd API-Key |
 | `JELLYFIN_URL` |  | — | Jellyfin Base-URL — aktiviert Polling-Modus |
 | `JELLYFIN_API_KEY` |  | — | Jellyfin API-Key (Dashboard → API Keys) |
 | `JELLYFIN_POLL_INTERVAL_SEC` |  | `15` | Poll-Intervall in Sekunden |
@@ -53,7 +53,7 @@ Alles per Environment-Variablen — siehe [`config.example.env`](config.example.
 | `WEBHOOK_TOKEN` |  | — | Optionaler Shared-Secret (nur Webhook-Modus) |
 | `NZBDAV_PATH_PREFIX` |  | — | Nur drosseln, wenn der Item-Pfad diesen String enthält |
 | `SESSION_TIMEOUT_SEC` |  | `90` | Heartbeat-Timeout (nur Webhook-Modus) |
-| `LISTEN_PORT` |  | `9999` | HTTP-Port des Receivers |
+| `LISTEN_PORT` |  | `6811` | HTTP-Port des Receivers |
 | `LOG_LEVEL` |  | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 ## Installation
@@ -64,7 +64,7 @@ Alles per Environment-Variablen — siehe [`config.example.env`](config.example.
    ```
    https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/cosmicflow2512/sabthrottle.xml
    ```
-2. `SAB_URL` und `SAB_API_KEY` ausfüllen, Port 9999 freigeben.
+2. `SABNZBD_URL` und `SABNZBD_API_KEY` ausfüllen, Port 6811 freigeben.
 3. Container starten.
 
 ### Docker Compose
@@ -75,18 +75,18 @@ services:
     image: ghcr.io/cosmicflow2512/sabthrottle:latest
     restart: unless-stopped
     ports:
-      - "9999:9999"
+      - "6811:6811"
     environment:
-      SAB_URL: "http://sabnzbd:8080"
-      SAB_API_KEY: "your_key"
+      SABNZBD_URL: "http://sabnzbd:8080"
+      SABNZBD_API_KEY: "your_key"
 ```
 
 ### Selbst bauen
 
 ```bash
 docker build -t sabthrottle .
-docker run -d --name sabthrottle -p 9999:9999 \
-  -e SAB_URL=http://sabnzbd:8080 -e SAB_API_KEY=xxx \
+docker run -d --name sabthrottle -p 6811:6811 \
+  -e SABNZBD_URL=http://sabnzbd:8080 -e SABNZBD_API_KEY=xxx \
   sabthrottle
 ```
 
@@ -103,7 +103,7 @@ docker run -d --name sabthrottle -p 9999:9999 \
 
 1. **Dashboard → Plugins → Catalog → Webhook** installieren, Jellyfin neu starten.
 2. **Dashboard → Webhook → Add Generic Destination**:
-   - **Webhook URL**: `http://<sabthrottle-host>:9999/jellyfin`
+   - **Webhook URL**: `http://<sabthrottle-host>:6811/jellyfin`
      (mit Token: `…/jellyfin?token=DEIN_TOKEN`)
    - **Notification Type**: `Playback Start`, `Playback Stop`, `Playback Progress`
    - **Item Type**: `Movies`, `Episodes` (optional)
@@ -115,17 +115,17 @@ docker run -d --name sabthrottle -p 9999:9999 \
 | Pfad | Methode | Zweck |
 |---|---|---|
 | `/jellyfin` | POST | Webhook-Empfänger |
-| `/status` | GET | Aktive Sessions + aktuelles SAB-Limit (JSON) |
+| `/status` | GET | Aktive Sessions + aktuelles SABnzbd-Limit (JSON) |
 | `/health` | GET | Healthcheck |
 
 ## Troubleshooting
 
-- **SAB ändert sich nicht**: API-Key prüfen, `SAB_URL` ohne trailing `/`,
-  Container muss SAB erreichen können (gleiches Docker-Netz oder IP).
+- **SABnzbd ändert sich nicht**: API-Key prüfen, `SABNZBD_URL` ohne trailing `/`,
+  Container muss SABnzbd erreichen können (gleiches Docker-Netz oder IP).
 - **Stream wird nicht erkannt**: `LOG_LEVEL=DEBUG` setzen und `/status` während
   des Streams aufrufen. Wenn Sessions nie auftauchen: Jellyfin-Webhook-Test
   schickt nichts an `/jellyfin`? URL/Port falsch.
-- **SAB bleibt nach Stream-Abbruch gedrosselt**: das übernimmt die GC nach
+- **SABnzbd bleibt nach Stream-Abbruch gedrosselt**: das übernimmt die GC nach
   `SESSION_TIMEOUT_SEC`. Wert ggf. kleiner setzen.
 
 ## Lizenz
