@@ -1,0 +1,15 @@
+services:
+  sabthrottle:
+    image: ghcr.io/cosmicflow2512/sabthrottle:latest
+    container_name: sabthrottle
+    restart: unless-stopped
+    ports:
+      - "9999:9999"
+    environment:
+      SAB_URL: "http://sabnzbd:8080"
+      SAB_API_KEY: "CHANGE_ME"
+      THROTTLE_PERCENT: "50"
+      FULL_PERCENT: "100"
+      # WEBHOOK_TOKEN: "optional-shared-secret"
+      # NZBDAV_PATH_PREFIX: "/mnt/user/nzbdav"
+      # LOG_LEVEL: "INFO"
