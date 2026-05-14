@@ -59,7 +59,7 @@ _current_limit = [FULL_PERCENT]
 def set_sabnzbd_speed(percent: int) -> None:
     try:
         r = requests.get(
-            f"{SABNZBD_URL}/sabnzbd/api",
+            f"{SABNZBD_URL}/api",
             params={
                 "mode": "config",
                 "name": "speedlimit",
