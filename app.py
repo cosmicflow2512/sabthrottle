@@ -34,6 +34,13 @@ GC_INTERVAL_SEC      = int(_env("GC_INTERVAL_SEC", "30"))
 LISTEN_PORT          = int(_env("LISTEN_PORT", "9999"))
 LOG_LEVEL            = _env("LOG_LEVEL", "INFO").upper()
 
+# Optional polling mode — if both are set, sabthrottle polls Jellyfin
+# directly and no Webhook plugin is required.
+JELLYFIN_URL              = _env("JELLYFIN_URL", "").rstrip("/")
+JELLYFIN_API_KEY          = _env("JELLYFIN_API_KEY", "")
+JELLYFIN_POLL_INTERVAL    = int(_env("JELLYFIN_POLL_INTERVAL_SEC", "15"))
+POLLING_ENABLED           = bool(JELLYFIN_URL and JELLYFIN_API_KEY)
+
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -126,12 +133,13 @@ def health():
 def status():
     with _lock:
         return jsonify(
+            mode="polling" if POLLING_ENABLED else "webhook",
             active_sessions=len(_active),
             sessions=list(_active.keys()),
             current_sab_limit_percent=_current_limit[0],
         )
 
-# ---------- Background GC ---------------------------------------------------
+# ---------- Background: GC for webhook mode --------------------------------
 
 def _gc_loop() -> None:
     while True:
@@ -144,7 +152,53 @@ def _gc_loop() -> None:
                 log.info("session %s expired (no heartbeat)", k)
             _apply_target()
 
-threading.Thread(target=_gc_loop, daemon=True).start()
+# ---------- Background: Jellyfin polling -----------------------------------
+
+def _fetch_jellyfin_sessions() -> list[dict[str, Any]] | None:
+    try:
+        r = requests.get(
+            f"{JELLYFIN_URL}/Sessions",
+            headers={"X-Emby-Token": JELLYFIN_API_KEY},
+            timeout=10,
+        )
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.warning("Jellyfin poll failed: %s", e)
+        return None
+
+def _poll_loop() -> None:
+    log.info("Jellyfin polling enabled (every %ds)", JELLYFIN_POLL_INTERVAL)
+    while True:
+        sessions = _fetch_jellyfin_sessions()
+        if sessions is not None:
+            new_active: dict[str, float] = {}
+            now = time.time()
+            for s in sessions:
+                npi = s.get("NowPlayingItem")
+                if not npi:
+                    continue
+                play_state = s.get("PlayState") or {}
+                if play_state.get("IsPaused"):
+                    continue
+                pseudo_payload = {
+                    "ItemPath": npi.get("Path", ""),
+                    "Path": npi.get("Path", ""),
+                }
+                if not _matches_filter(pseudo_payload):
+                    continue
+                sid = s.get("Id") or f"{s.get('UserId','?')}::{npi.get('Id','?')}"
+                new_active[sid] = now
+            with _lock:
+                _active.clear()
+                _active.update(new_active)
+                _apply_target()
+        time.sleep(JELLYFIN_POLL_INTERVAL)
+
+if POLLING_ENABLED:
+    threading.Thread(target=_poll_loop, daemon=True).start()
+else:
+    threading.Thread(target=_gc_loop, daemon=True).start()
 
 # ---------- Entrypoint ------------------------------------------------------
 
@@ -152,6 +206,7 @@ if __name__ == "__main__":
     log.info("sabthrottle starting on port %d", LISTEN_PORT)
     log.info("SAB target: %s, throttle=%d%%, full=%d%%",
              SAB_URL, THROTTLE_PERCENT, FULL_PERCENT)
+    log.info("mode: %s", "polling" if POLLING_ENABLED else "webhook-only")
     if NZBDAV_PATH_PREFIX:
         log.info("path filter active: %s", NZBDAV_PATH_PREFIX)
     set_sab_speed(FULL_PERCENT)
