@@ -13,7 +13,7 @@
   <Category>MediaApp:Other Tools:</Category>
   <WebUI>http://[IP]:[PORT:9999]/status</WebUI>
   <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/icon.png</Icon>
+  <Icon>https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/cosmicflow2512/images/sabthrottle.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>

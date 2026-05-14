@@ -62,7 +62,7 @@ Alles per Environment-Variablen — siehe [`config.example.env`](config.example.
 
 1. Unter *Docker → Add Container → Template URL* einfügen:
    ```
-   https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/unraid-template.xml
+   https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/cosmicflow2512/sabthrottle.xml
    ```
 2. `SAB_URL` und `SAB_API_KEY` ausfüllen, Port 9999 freigeben.
 3. Container starten.
