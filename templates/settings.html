@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}sabthrottle · Einstellungen{% endblock %}
+{% block body %}
+
+<div class="card">
+  <h2>Globale Einstellungen</h2>
+  <form method="post">
+    <div class="row">
+      <div>
+        <label>Leitungsgeschwindigkeit (Mbit/s)</label>
+        <input type="number" name="line_speed_mbit" value="{{ settings.line_speed_mbit }}" min="0" step="1">
+        <p class="muted" style="font-size:12px;margin:6px 0 0">
+          0 = unbekannt. Wird gebraucht, um Prozent-Regeln in absolute MB/s umzurechnen
+          und mit Mbit/MB-Regeln vergleichen zu können.
+        </p>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <div>
+        <label>Standard-Limit (%)</label>
+        <input type="number" name="default_percent" value="{{ settings.default_percent }}" min="1" max="100">
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Gilt, wenn keine Regel und kein Stream aktiv ist.</p>
+      </div>
+      <div>
+        <label>Drosselung bei Stream (%)</label>
+        <input type="number" name="throttle_percent" value="{{ settings.throttle_percent }}" min="1" max="100">
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Wird angewendet, sobald Jellyfin streamt.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Speichern</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Hinweise</h2>
+  <ul class="muted" style="margin:0;padding-left:20px;line-height:1.8">
+    <li>Werte hier sind <em>Defaults</em>. Spezifische Zeitfenster legst du als <a href="{{ url_for('ui_rules') }}">Regel</a> an.</li>
+    <li>Wenn mehrere Limits gleichzeitig gelten (Stream + Regel), gewinnt das <strong>kleinste</strong>.</li>
+    <li>Eine Regel mit Modus "Pause" pausiert SABnzbd komplett — gewinnt immer.</li>
+  </ul>
+</div>
+
+{% endblock %}

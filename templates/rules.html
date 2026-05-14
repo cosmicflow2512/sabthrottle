@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}sabthrottle · Zeitregeln{% endblock %}
+{% block body %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="margin:0">Zeitbasierte Limits</h2>
+    <a class="btn" href="{{ url_for('ui_rule_new') }}">+ Neue Regel</a>
+  </div>
+
+  {% if not rules %}
+    <p class="muted">Noch keine Regeln. Klick "+ Neue Regel", um z. B. nachts auf 100 % und tagsüber auf 50 % zu drosseln.</p>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Name</th>
+          <th>Tage</th>
+          <th>Zeitfenster</th>
+          <th>Limit</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rules %}
+        <tr>
+          <td>
+            {% if r.enabled %}
+              <span class="pill pill-ok">an</span>
+            {% else %}
+              <span class="pill pill-bad">aus</span>
+            {% endif %}
+          </td>
+          <td>{{ r.name or "—" }}</td>
+          <td class="muted">
+            {% set short = {1:"Mo",2:"Di",3:"Mi",4:"Do",5:"Fr",6:"Sa",7:"So"} %}
+            {% for d in r.weekdays or [] %}{{ short[d] }}{% if not loop.last %} · {% endif %}{% endfor %}
+          </td>
+          <td class="muted">{{ r.start }} – {{ r.end }}</td>
+          <td>{{ units.format_limit(r.mode, r.value, None) }}</td>
+          <td style="text-align:right">
+            <a class="btn btn-secondary" href="{{ url_for('ui_rule_edit', rid=r.id) }}">Bearbeiten</a>
+            <form class="inline-form" method="post" action="{{ url_for('ui_rule_delete', rid=r.id) }}"
+                  onsubmit="return confirm('Regel wirklich löschen?')">
+              <button type="submit" class="btn btn-danger">Löschen</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+
+{% endblock %}

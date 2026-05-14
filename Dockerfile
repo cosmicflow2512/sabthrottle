@@ -9,7 +9,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY app.py .
+COPY app.py units.py storage.py sabnzbd.py jellyfin.py resolver.py ./
+COPY templates/ ./templates/
+
+VOLUME /config
 
 EXPOSE 6811
 

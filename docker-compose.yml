@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "6811:6811"
+    volumes:
+      - ./config:/config
     environment:
       SABNZBD_URL: "http://sabnzbd:8080"
       SABNZBD_API_KEY: "CHANGE_ME"

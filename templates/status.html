@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}sabthrottle · Status{% endblock %}
+{% block body %}
+
+<div class="card">
+  <h2>Aktueller Zustand</h2>
+  {% if decision %}
+    <div class="big">{{ units.format_limit(decision.mode, decision.value, line_kbps) }}</div>
+    <p class="muted" style="margin:8px 0 0">
+      Grund:
+      {% if "Jellyfin" in decision.source %}
+        <span class="pill pill-warn">{{ decision.source }}</span>
+      {% elif "Zeitregel" in decision.source %}
+        <span class="pill pill-info">{{ decision.source }}</span>
+      {% else %}
+        <span class="pill pill-ok">{{ decision.source }}</span>
+      {% endif %}
+    </p>
+  {% else %}
+    <p class="muted">Noch keine Auswertung — wird beim nächsten Tick aktualisiert.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Jellyfin</h2>
+  <div class="row">
+    <div>
+      <label>Polling</label>
+      {% if polling_enabled %}
+        <span class="pill pill-ok">aktiv</span>
+      {% else %}
+        <span class="pill pill-bad">deaktiviert</span>
+        <p class="muted" style="margin:8px 0 0;font-size:13px">JELLYFIN_URL und JELLYFIN_API_KEY setzen, um Polling zu aktivieren.</p>
+      {% endif %}
+    </div>
+    <div>
+      <label>Aktive Streams</label>
+      <div style="font-size:20px;font-weight:600">{{ active_streams }}</div>
+    </div>
+  </div>
+</div>
+
+{% if decision and decision.candidates|length > 1 %}
+<div class="card">
+  <h2>Auswertung dieses Ticks</h2>
+  <table>
+    <thead><tr><th>Quelle</th><th>Limit</th><th>=</th></tr></thead>
+    <tbody>
+      {% for c in decision.candidates %}
+        <tr {% if c.source == decision.source %}style="font-weight:600"{% endif %}>
+          <td>{{ c.source }}</td>
+          <td>{{ units.format_limit(c.mode, c.value, line_kbps) }}</td>
+          <td class="muted">{{ units.format_kbps(c.kbps) }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="margin:12px 0 0;font-size:13px">Das kleinste Limit gewinnt.</p>
+</div>
+{% endif %}
+
+{% endblock %}

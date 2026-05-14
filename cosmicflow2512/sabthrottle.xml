@@ -9,9 +9,9 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/cosmicflow2512/sabthrottle/issues</Support>
   <Project>https://github.com/cosmicflow2512/sabthrottle</Project>
-  <Overview>Throttles SABnzbd automatically while Jellyfin is actively streaming (e.g. via NZBDav), so streams always have enough bandwidth.</Overview>
+  <Overview>Throttles SABnzbd automatically while Jellyfin is actively streaming (e.g. via NZBDav), so streams always have enough bandwidth. Also supports user-configurable time-based speed profiles (e.g. weekdays 7-17 = 50%, nights = 100%) via a built-in WebUI.</Overview>
   <Category>MediaApp:Other Tools:</Category>
-  <WebUI>http://[IP]:[PORT:6811]/status</WebUI>
+  <WebUI>http://[IP]:[PORT:6811]/</WebUI>
   <TemplateURL/>
   <Icon>https://raw.githubusercontent.com/cosmicflow2512/sabthrottle/main/cosmicflow2512/images/sabthrottle.png</Icon>
   <ExtraParams/>
@@ -20,17 +20,18 @@
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Description>Receives Jellyfin webhook events (PlaybackStart/Stop/Progress) and adjusts the SABnzbd speed limit dynamically. While at least one stream is active, SABnzbd is throttled to a configurable percentage of full speed. When all streams end, full speed is restored.</Description>
-  <Config Name="Webhook Port" Target="6811" Default="6811" Mode="tcp" Description="HTTP port the webhook receiver listens on" Type="Port" Display="always" Required="true" Mask="false">6811</Config>
+  <Description>Polls Jellyfin for active playback sessions and adjusts the SABnzbd speed limit dynamically. While at least one stream is active, SABnzbd is throttled. When all streams end, full speed is restored. Additionally supports user-configurable time-based speed profiles (e.g. weekdays 7-17 = 50%, nights = 100%) configured directly in the built-in WebUI. Rules and settings are persisted to /config so they survive container restarts.</Description>
+  <Config Name="WebUI Port" Target="6811" Default="6811" Mode="tcp" Description="HTTP port the WebUI and API listen on" Type="Port" Display="always" Required="true" Mask="false">6811</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/sabthrottle" Mode="rw" Description="Where rules.json and settings.json are stored." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/sabthrottle</Config>
   <Config Name="SABNZBD_URL" Target="SABNZBD_URL" Default="http://192.168.x.x:8080" Mode="" Description="Base URL of your SABnzbd instance" Type="Variable" Display="always" Required="true" Mask="false">http://192.168.x.x:8080</Config>
   <Config Name="SABNZBD_API_KEY" Target="SABNZBD_API_KEY" Default="" Mode="" Description="SABnzbd API key (Config -> General -> API Key)" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="THROTTLE_PERCENT" Target="THROTTLE_PERCENT" Default="50" Mode="" Description="SAB speed limit (in percent) while a stream is active" Type="Variable" Display="always" Required="true" Mask="false">50</Config>
-  <Config Name="FULL_PERCENT" Target="FULL_PERCENT" Default="100" Mode="" Description="SAB speed limit (in percent) when no stream is active" Type="Variable" Display="always" Required="true" Mask="false">100</Config>
+  <Config Name="THROTTLE_PERCENT" Target="THROTTLE_PERCENT" Default="50" Mode="" Description="Initial throttle percent while a Jellyfin stream is active (seeds settings.json on first start; can be changed in the WebUI later)" Type="Variable" Display="always" Required="false" Mask="false">50</Config>
+  <Config Name="FULL_PERCENT" Target="FULL_PERCENT" Default="100" Mode="" Description="Initial default speed limit (percent) when no stream and no rule is active (seeds settings.json on first start; can be changed in the WebUI later)" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="LINE_SPEED_MBIT" Target="LINE_SPEED_MBIT" Default="0" Mode="" Description="Optional: your real internet line speed in Mbit/s. Used so percent values can be displayed as MB/s and compared with absolute (Mbit/s, MB/s) rules. 0 = unknown." Type="Variable" Display="always" Required="false" Mask="false">0</Config>
   <Config Name="JELLYFIN_URL" Target="JELLYFIN_URL" Default="http://192.168.x.x:8096" Mode="" Description="Optional: Jellyfin base URL. If set together with JELLYFIN_API_KEY, sabthrottle polls Jellyfin directly and the Webhook plugin is not needed." Type="Variable" Display="always" Required="false" Mask="false">http://192.168.x.x:8096</Config>
   <Config Name="JELLYFIN_API_KEY" Target="JELLYFIN_API_KEY" Default="" Mode="" Description="Jellyfin API key (Dashboard -> API Keys). Required for polling mode." Type="Variable" Display="always" Required="false" Mask="true"/>
   <Config Name="JELLYFIN_POLL_INTERVAL_SEC" Target="JELLYFIN_POLL_INTERVAL_SEC" Default="15" Mode="" Description="Poll interval in seconds (only used in polling mode)" Type="Variable" Display="advanced" Required="false" Mask="false">15</Config>
   <Config Name="WEBHOOK_TOKEN" Target="WEBHOOK_TOKEN" Default="" Mode="" Description="Optional shared secret to authenticate the Jellyfin webhook (only used in webhook mode)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
   <Config Name="NZBDAV_PATH_PREFIX" Target="NZBDAV_PATH_PREFIX" Default="" Mode="" Description="If set, only throttle when the playing item path contains this string (e.g. /mnt/user/nzbdav)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="SESSION_TIMEOUT_SEC" Target="SESSION_TIMEOUT_SEC" Default="90" Mode="" Description="Drop sessions that have not sent a heartbeat for this many seconds" Type="Variable" Display="advanced" Required="false" Mask="false">90</Config>
   <Config Name="LOG_LEVEL" Target="LOG_LEVEL" Default="INFO" Mode="" Description="Log verbosity (DEBUG, INFO, WARNING, ERROR)" Type="Variable" Display="advanced" Required="false" Mask="false">INFO</Config>
 </Container>
