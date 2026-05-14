@@ -40,14 +40,38 @@
   </div>
 </div>
 
-{% if decision and decision.candidates|length > 1 %}
+{% if decision %}
 <div class="card">
   <h2>Auswertung dieses Ticks</h2>
   <table>
-    <thead><tr><th>Quelle</th><th>Limit</th><th>=</th></tr></thead>
+    <thead><tr><th>Stufe</th><th>Quelle</th><th>Limit</th><th>=</th></tr></thead>
     <tbody>
-      {% for c in decision.candidates %}
-        <tr {% if c.source == decision.source %}style="font-weight:600"{% endif %}>
+      <tr {% if not decision.stream_override %}style="font-weight:600"{% endif %}>
+        <td>Base</td>
+        <td>{{ decision.base.source }}</td>
+        <td>{{ units.format_limit(decision.base.mode, decision.base.value, line_kbps) }}</td>
+        <td class="muted">{{ units.format_kbps(decision.base.kbps) }}</td>
+      </tr>
+      {% if decision.stream_override %}
+        <tr style="font-weight:600">
+          <td>Override</td>
+          <td>{{ decision.stream_override.source }}</td>
+          <td>{{ units.format_limit(decision.stream_override.mode, decision.stream_override.value, line_kbps) }}</td>
+          <td class="muted">{{ units.format_kbps(decision.stream_override.kbps) }}</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  <p class="muted" style="margin:12px 0 0;font-size:13px">
+    Logik: aktive Zeitregel ersetzt den Default. Streamt Jellyfin und das Stream-Limit ist niedriger, gewinnt es.
+  </p>
+
+  {% if decision.rule_candidates|length > 1 %}
+  <h3 style="margin:24px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Mehrere Regeln gleichzeitig aktiv — kleinste gewinnt</h3>
+  <table>
+    <tbody>
+      {% for c in decision.rule_candidates %}
+        <tr {% if c.source == decision.base.source %}style="font-weight:600"{% endif %}>
           <td>{{ c.source }}</td>
           <td>{{ units.format_limit(c.mode, c.value, line_kbps) }}</td>
           <td class="muted">{{ units.format_kbps(c.kbps) }}</td>
@@ -55,7 +79,7 @@
       {% endfor %}
     </tbody>
   </table>
-  <p class="muted" style="margin:12px 0 0;font-size:13px">Das kleinste Limit gewinnt.</p>
+  {% endif %}
 </div>
 {% endif %}
 
