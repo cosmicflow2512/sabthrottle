@@ -1,27 +1,29 @@
 {% extends "base.html" %}
-{% block title %}sabthrottle · Regel {{ "anlegen" if is_new else "bearbeiten" }}{% endblock %}
+{% block title %}sabthrottle · {{ "New rule" if is_new else "Edit rule" }}{% endblock %}
 {% block body %}
 
 <div class="card">
-  <h2>{{ "Neue Regel" if is_new else "Regel bearbeiten" }}</h2>
+  <h2>{{ "New rule" if is_new else "Edit rule" }} — {{ labels[target] }}</h2>
 
   <form method="post">
     <div class="row">
       <div>
         <label>Name (optional)</label>
-        <input type="text" name="name" value="{{ rule.name or '' }}" placeholder="z. B. Werktags Tagsüber">
+        <input type="text" name="name" value="{{ rule.name or '' }}" placeholder="e.g. Weekday daytime">
       </div>
       <div>
         <label>Status</label>
         <label class="day-toggle">
           <input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}>
-          aktiv
+          enabled
         </label>
       </div>
     </div>
 
     <div style="margin-top:16px">
-      <label>Wochentage</label>
+      <label>Weekdays
+        <span class="info" tabindex="0" data-tip="No day selected = the rule applies every day.">i</span>
+      </label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% for num, short in weekdays %}
           <label class="day-toggle">
@@ -35,38 +37,37 @@
 
     <div class="row" style="margin-top:16px">
       <div>
-        <label>Startzeit</label>
+        <label>Start time</label>
         <input type="time" name="start" value="{{ rule.start }}" required>
       </div>
       <div>
-        <label>Endzeit</label>
+        <label>End time
+          <span class="info" tabindex="0" data-tip="If the end time is before the start time, the window spans midnight (e.g. 22:00 → 06:00).">i</span>
+        </label>
         <input type="time" name="end" value="{{ rule.end }}" required>
       </div>
     </div>
-    <p class="muted" style="font-size:13px;margin:8px 0 0">
-      Tipp: Wenn Endzeit kleiner als Startzeit ist, gilt die Regel über Mitternacht (z. B. 22:00 → 06:00).
-    </p>
 
     <div class="row" style="margin-top:16px">
       <div>
-        <label>Limit-Modus</label>
+        <label>Limit mode</label>
         <select name="mode">
-          <option value="percent" {% if rule.mode=='percent' %}selected{% endif %}>Prozent (%)</option>
+          <option value="percent" {% if rule.mode=='percent' %}selected{% endif %}>Percent (%)</option>
           <option value="mbit"    {% if rule.mode=='mbit' %}selected{% endif %}>Mbit/s</option>
           <option value="mb"      {% if rule.mode=='mb' %}selected{% endif %}>MB/s</option>
-          <option value="pause"   {% if rule.mode=='pause' %}selected{% endif %}>Pause (komplett anhalten)</option>
+          <option value="pause"   {% if rule.mode=='pause' %}selected{% endif %}>Pause (stop downloads)</option>
         </select>
       </div>
       <div>
-        <label>Limit-Wert</label>
-        <input type="number" name="value" value="{{ rule.value }}" step="1" min="0">
-        <p class="muted" style="font-size:12px;margin:6px 0 0">Bei Modus "Pause" wird der Wert ignoriert.</p>
+        <label>Limit value</label>
+        <input type="number" name="value" value="{{ rule.value }}" step="1" min="1" max="10000">
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Ignored when mode is "Pause". Percent is capped at 100.</p>
       </div>
     </div>
 
     <div class="actions">
-      <button type="submit">{{ "Anlegen" if is_new else "Speichern" }}</button>
-      <a class="btn btn-secondary" href="{{ url_for('ui_rules') }}">Abbrechen</a>
+      <button type="submit">{{ "Create" if is_new else "Save" }}</button>
+      <a class="btn btn-secondary" href="{{ url_for('ui_rules', target=target) }}">Cancel</a>
     </div>
   </form>
 </div>

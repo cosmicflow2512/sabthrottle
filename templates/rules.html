@@ -1,23 +1,37 @@
 {% extends "base.html" %}
-{% block title %}sabthrottle · Zeitregeln{% endblock %}
+{% block title %}sabthrottle · Rules{% endblock %}
 {% block body %}
+
+<div class="tabs">
+  <a href="{{ url_for('ui_rules', target='sab') }}" {% if target=='sab' %}class="active"{% endif %}>SABnzbd</a>
+  <a href="{{ url_for('ui_rules', target='jd') }}" {% if target=='jd' %}class="active"{% endif %}>JDownloader</a>
+</div>
 
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-    <h2 style="margin:0">Zeitbasierte Limits</h2>
-    <a class="btn" href="{{ url_for('ui_rule_new') }}">+ Neue Regel</a>
+    <h2 style="margin:0">Time-based limits — {{ labels[target] }}
+      <span class="info" tabindex="0" data-tip="Each downloader has its own independent rule set. Rules define a speed limit for a time window. While a Jellyfin stream is active, the stream budget is applied on top — whichever limit is lower wins.">i</span>
+    </h2>
+    <a class="btn" href="{{ url_for('ui_rule_new', target=target) }}">+ New rule</a>
   </div>
 
+  {% if target=='jd' and not jd_configured %}
+    <p class="muted" style="margin-bottom:14px">
+      <span class="pill pill-warn">JDownloader is not configured</span>
+      — rules are saved but have no effect until MYJD_EMAIL, MYJD_PASSWORD and MYJD_DEVICE are set.
+    </p>
+  {% endif %}
+
   {% if not rules %}
-    <p class="muted">Noch keine Regeln. Klick "+ Neue Regel", um z. B. nachts auf 100 % und tagsüber auf 50 % zu drosseln.</p>
+    <p class="muted">No rules yet. Click "+ New rule" to e.g. throttle to 50 % on weekday daytimes and run at 100 % at night.</p>
   {% else %}
     <table>
       <thead>
         <tr>
           <th>Status</th>
           <th>Name</th>
-          <th>Tage</th>
-          <th>Zeitfenster</th>
+          <th>Days</th>
+          <th>Window</th>
           <th>Limit</th>
           <th></th>
         </tr>
@@ -27,23 +41,23 @@
         <tr>
           <td>
             {% if r.enabled %}
-              <span class="pill pill-ok">an</span>
+              <span class="pill pill-ok">on</span>
             {% else %}
-              <span class="pill pill-bad">aus</span>
+              <span class="pill pill-bad">off</span>
             {% endif %}
           </td>
           <td>{{ r.name or "—" }}</td>
           <td class="muted">
-            {% set short = {1:"Mo",2:"Di",3:"Mi",4:"Do",5:"Fr",6:"Sa",7:"So"} %}
+            {% set short = {1:"Mon",2:"Tue",3:"Wed",4:"Thu",5:"Fri",6:"Sat",7:"Sun"} %}
             {% for d in r.weekdays or [] %}{{ short[d] }}{% if not loop.last %} · {% endif %}{% endfor %}
           </td>
           <td class="muted">{{ r.start }} – {{ r.end }}</td>
           <td>{{ units.format_limit(r.mode, r.value, None) }}</td>
           <td style="text-align:right">
-            <a class="btn btn-secondary" href="{{ url_for('ui_rule_edit', rid=r.id) }}">Bearbeiten</a>
+            <a class="btn btn-secondary" href="{{ url_for('ui_rule_edit', rid=r.id) }}">Edit</a>
             <form class="inline-form" method="post" action="{{ url_for('ui_rule_delete', rid=r.id) }}"
-                  onsubmit="return confirm('Regel wirklich löschen?')">
-              <button type="submit" class="btn btn-danger">Löschen</button>
+                  onsubmit="return confirm('Really delete this rule?')">
+              <button type="submit" class="btn btn-danger">Delete</button>
             </form>
           </td>
         </tr>

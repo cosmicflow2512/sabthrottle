@@ -12,8 +12,12 @@ services:
       SABNZBD_API_KEY: "CHANGE_ME"
       JELLYFIN_URL: "http://jellyfin:8096"
       JELLYFIN_API_KEY: "CHANGE_ME"
-      THROTTLE_PERCENT: "50"
+      STREAM_BUDGET_PERCENT: "50"
       FULL_PERCENT: "100"
+      # --- JDownloader 2 via MyJDownloader (optional) ---
+      # MYJD_EMAIL: "you@example.com"
+      # MYJD_PASSWORD: "your_myjd_password"
+      # MYJD_DEVICE: "your-jd-device-name"
       # WEBHOOK_TOKEN: "optional-shared-secret"
       # NZBDAV_PATH_PREFIX: "/mnt/user/nzbdav"
       # LOG_LEVEL: "INFO"

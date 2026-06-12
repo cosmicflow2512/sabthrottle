@@ -1,55 +1,143 @@
 {% extends "base.html" %}
-{% block title %}sabthrottle · Einstellungen{% endblock %}
+{% block title %}sabthrottle · Settings{% endblock %}
 {% block body %}
 
+<form method="post">
+
 <div class="card">
-  <h2>Globale Einstellungen</h2>
-  <form method="post">
-    <div class="row">
-      <div>
-        <label>Leitungsgeschwindigkeit (Mbit/s)</label>
-        <input type="number" name="line_speed_mbit" value="{{ settings.line_speed_mbit }}" min="0" step="1">
-        <p class="muted" style="font-size:12px;margin:6px 0 0">
-          {% if settings.line_speed_mbit %}
-            Manuell gesetzt. 0 eintragen, um auf den Wert aus SABnzbd zurückzufallen.
-          {% elif detected_mbit %}
-            <span class="pill pill-info">auto</span>
-            Aktuell aus SABnzbd übernommen: <strong>{{ "%.0f"|format(detected_mbit) }} Mbit/s</strong>
-            ({{ "%.1f"|format(detected_kbps / 1000) }} MB/s).
-            Einen Wert eintragen, um das zu überschreiben.
-          {% else %}
-            0 = unbekannt. SABnzbd hat auch keinen <code>bandwidth_max</code> gesetzt —
-            Prozent-Regeln nutzen dann 1 Gbit/s als Referenz.
-          {% endif %}
-        </p>
-      </div>
+  <h2>Line speed</h2>
+  <div class="row">
+    <div>
+      <label>Internet line speed (Mbit/s)
+        <span class="info" tabindex="0" data-tip="Your real download line speed. Used as the reference for all percent values and for the stream bandwidth budget. 0 = auto-detect from SABnzbd's bandwidth_max setting, falling back to 1 Gbit/s.">i</span>
+      </label>
+      <input type="number" name="line_speed_mbit" value="{{ settings.line_speed_mbit }}" min="0" step="1">
+      <p class="muted" style="font-size:12px;margin:6px 0 0">
+        {% if settings.line_speed_mbit %}
+          Set manually. Enter 0 to fall back to the value detected from SABnzbd.
+        {% elif detected_mbit %}
+          <span class="pill pill-info">auto</span>
+          Currently taken from SABnzbd: <strong>{{ "%.0f"|format(detected_mbit) }} Mbit/s</strong>
+          ({{ "%.1f"|format(detected_kbps / 1000) }} MB/s).
+          Enter a value to override.
+        {% else %}
+          0 = unknown. SABnzbd has no <code>bandwidth_max</code> set either —
+          percent values then use 1 Gbit/s as the reference.
+        {% endif %}
+      </p>
     </div>
-
-    <div class="row" style="margin-top:16px">
-      <div>
-        <label>Standard-Limit (%)</label>
-        <input type="number" name="default_percent" value="{{ settings.default_percent }}" min="1" max="100">
-        <p class="muted" style="font-size:12px;margin:6px 0 0">Gilt, wenn keine Regel und kein Stream aktiv ist.</p>
-      </div>
-      <div>
-        <label>Drosselung bei Stream (%)</label>
-        <input type="number" name="throttle_percent" value="{{ settings.throttle_percent }}" min="1" max="100">
-        <p class="muted" style="font-size:12px;margin:6px 0 0">Wird angewendet, sobald Jellyfin streamt.</p>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button type="submit">Speichern</button>
-    </div>
-  </form>
+  </div>
 </div>
 
 <div class="card">
-  <h2>Hinweise</h2>
+  <h2>Stream throttling
+    <span class="info" tabindex="0" data-tip="While at least one Jellyfin stream is playing, ALL downloaders together share one bandwidth budget. This guarantees a fixed reserve for streaming no matter how many tools are downloading.">i</span>
+  </h2>
+  <div class="row">
+    <div>
+      <label>Total download budget while streaming (%)
+        <span class="info" tabindex="0" data-tip="The combined limit for all downloaders while a stream is active, as a percentage of the line speed. Example: 80 % on a 1 Gbit/s line = downloads may use at most 800 Mbit/s in total; at least 200 Mbit/s stay reserved for streaming.">i</span>
+      </label>
+      <input type="number" name="stream_budget_percent" value="{{ settings.stream_budget_percent }}" min="1" max="100">
+    </div>
+    <div>
+      <label>Budget split
+        <span class="info" tabindex="0" data-tip="How the budget is divided when several downloaders are active at the same time. Demand: proportional to each downloader's measured speed — a downloader stuck on a slow host gets a small share and the rest goes to the others. Equal: simple 50/50 split. With only one active downloader both modes behave the same: it gets the whole budget.">i</span>
+      </label>
+      <select name="split_mode">
+        <option value="demand" {% if settings.split_mode=='demand' %}selected{% endif %}>Demand-based (recommended)</option>
+        <option value="equal"  {% if settings.split_mode=='equal'  %}selected{% endif %}>Equal split</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <div>
+      <label style="display:flex;align-items:center">Burst protection
+        <span class="info" tabindex="0" data-tip="While a stream is playing, idle downloaders are parked at the minimum share (see below) instead of keeping their normal limit. Without this, a download that suddenly starts can run at full speed for up to one poll interval (15 s) before throttling kicks in. Usually unnecessary — Jellyfin's playback buffer absorbs short bursts — but useful on slow lines or with very bursty downloads.">i</span>
+      </label>
+      <label class="day-toggle">
+        <input type="checkbox" name="burst_protection" {% if settings.burst_protection %}checked{% endif %}>
+        enabled
+      </label>
+    </div>
+  </div>
+
+  <details style="margin-top:16px">
+    <summary class="muted" style="cursor:pointer">Advanced split tuning</summary>
+    <div class="row" style="margin-top:12px">
+      <div>
+        <label>Headroom factor
+          <span class="info" tabindex="0" data-tip="Demand mode: each downloader's share is based on its measured speed multiplied by this factor, so it always has room to speed up. Higher = faster ramp-up when a slow host becomes fast, but less precise sharing. Default 1.5.">i</span>
+        </label>
+        <input type="number" name="headroom_factor" value="{{ settings.headroom_factor }}" min="1" max="5" step="0.1">
+      </div>
+      <div>
+        <label>Minimum share (KB/s)
+          <span class="info" tabindex="0" data-tip="Demand mode: the minimum assumed demand per downloader, so a downloader that is just starting is never starved. Also the parking speed used by burst protection. Default 5120 KB/s (≈ 5 MB/s).">i</span>
+        </label>
+        <input type="number" name="floor_kbps" value="{{ settings.floor_kbps }}" min="64" step="64">
+      </div>
+      <div>
+        <label>Speed smoothing (α)
+          <span class="info" tabindex="0" data-tip="Demand mode: smoothing factor for measured speeds (exponential moving average). Lower = smoother, slower to react; higher = reacts faster but the split may jitter when speeds fluctuate. Default 0.4.">i</span>
+        </label>
+        <input type="number" name="ema_alpha" value="{{ settings.ema_alpha }}" min="0.05" max="1" step="0.05">
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Downloaders</h2>
+  <div class="row">
+    <div>
+      <h3 style="margin:0 0 12px;font-size:14px">SABnzbd</h3>
+      <label class="day-toggle" style="margin-bottom:12px">
+        <input type="checkbox" name="sab_enabled" {% if settings.sab_enabled %}checked{% endif %}>
+        managed by sabthrottle
+      </label>
+      <label>Default limit (%)
+        <span class="info" tabindex="0" data-tip="The baseline limit applied when no time rule matches and no stream is active.">i</span>
+      </label>
+      <input type="number" name="sab_default_percent" value="{{ settings.sab_default_percent }}" min="1" max="100">
+    </div>
+    <div>
+      <h3 style="margin:0 0 12px;font-size:14px">JDownloader
+        {% if not jd_configured %}
+          <span class="pill pill-warn" style="margin-left:6px">not configured</span>
+        {% endif %}
+      </h3>
+      <label class="day-toggle" style="margin-bottom:12px">
+        <input type="checkbox" name="jd_enabled" {% if settings.jd_enabled %}checked{% endif %}>
+        managed by sabthrottle
+      </label>
+      <label>Default limit (%)
+        <span class="info" tabindex="0" data-tip="The baseline limit applied when no time rule matches and no stream is active. At 100 % JDownloader's speed limiter is disabled entirely.">i</span>
+      </label>
+      <input type="number" name="jd_default_percent" value="{{ settings.jd_default_percent }}" min="1" max="100">
+      {% if not jd_configured %}
+        <p class="muted" style="font-size:12px;margin:8px 0 0">
+          Set MYJD_EMAIL, MYJD_PASSWORD and MYJD_DEVICE on the container to enable.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="actions" style="margin-bottom:20px">
+  <button type="submit">Save</button>
+</div>
+
+</form>
+
+<div class="card">
+  <h2>How limits are combined</h2>
   <ul class="muted" style="margin:0;padding-left:20px;line-height:1.8">
-    <li>Werte hier sind <em>Defaults</em>. Spezifische Zeitfenster legst du als <a href="{{ url_for('ui_rules') }}">Regel</a> an.</li>
-    <li>Wenn mehrere Limits gleichzeitig gelten (Stream + Regel), gewinnt das <strong>kleinste</strong>.</li>
-    <li>Eine Regel mit Modus "Pause" pausiert SABnzbd komplett — gewinnt immer.</li>
+    <li>Per downloader: an active <a href="{{ url_for('ui_rules') }}">time rule</a> replaces the default. If several rules match, the lowest wins.</li>
+    <li>While streaming: the budget share is applied on top — whichever is lower wins. A stream never weakens a stricter rule.</li>
+    <li>A rule with mode "Pause" stops that downloader completely and removes it from the budget split.</li>
+    <li>JDownloader's pause keeps connections alive at minimal speed, so resuming is instant.</li>
   </ul>
 </div>
 

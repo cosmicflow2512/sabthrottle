@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -43,6 +43,22 @@
     .day-toggle input{margin:0}
     form .actions{display:flex;gap:8px;margin-top:16px}
     .inline-form{display:inline}
+    .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+    .tabs a{padding:8px 18px;color:var(--muted);text-decoration:none;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none}
+    .tabs a.active{color:var(--accent);background:var(--bg2);border-color:var(--border)}
+    .tabs a:hover{color:var(--fg)}
+    /* --- Tooltips: pure-CSS info icon -------------------------------- */
+    .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+      border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:11px;font-weight:700;
+      font-style:normal;cursor:help;position:relative;vertical-align:middle;margin-left:6px;text-transform:none;letter-spacing:0}
+    .info::after{content:attr(data-tip);position:absolute;bottom:130%;left:50%;transform:translateX(-50%);
+      width:280px;background:#020617;border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+      color:var(--fg);font-size:12px;font-weight:400;line-height:1.5;text-align:left;white-space:normal;
+      opacity:0;pointer-events:none;transition:opacity .12s;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+    .info::before{content:"";position:absolute;bottom:118%;left:50%;transform:translateX(-50%);
+      border:6px solid transparent;border-top-color:var(--border);opacity:0;transition:opacity .12s}
+    .info:hover::after,.info:hover::before,.info:focus::after,.info:focus::before{opacity:1}
+    @media (max-width:640px){.info::after{left:auto;right:-8px;transform:none}}
   </style>
 </head>
 <body>
@@ -50,8 +66,8 @@
     <h1>sabthrottle</h1>
     <nav>
       <a href="{{ url_for('ui_index') }}" {% if request.endpoint=='ui_index' %}class="active"{% endif %}>Status</a>
-      <a href="{{ url_for('ui_rules') }}" {% if request.endpoint and request.endpoint.startswith('ui_rule') %}class="active"{% endif %}>Zeitregeln</a>
-      <a href="{{ url_for('ui_settings') }}" {% if request.endpoint=='ui_settings' %}class="active"{% endif %}>Einstellungen</a>
+      <a href="{{ url_for('ui_rules') }}" {% if request.endpoint and request.endpoint.startswith('ui_rule') %}class="active"{% endif %}>Rules</a>
+      <a href="{{ url_for('ui_settings') }}" {% if request.endpoint=='ui_settings' %}class="active"{% endif %}>Settings</a>
     </nav>
   </header>
   <main>{% block body %}{% endblock %}</main>

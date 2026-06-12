@@ -3,75 +3,81 @@
 {% block body %}
 
 <div class="card">
-  <h2>Aktueller Zustand</h2>
-  {% if decision %}
-    <div class="big">{{ units.format_limit(decision.mode, decision.value, line_kbps) }}</div>
-    <p class="muted" style="margin:8px 0 0">
-      Grund:
-      {% if "Jellyfin" in decision.source %}
-        <span class="pill pill-warn">{{ decision.source }}</span>
-      {% elif "Zeitregel" in decision.source %}
-        <span class="pill pill-info">{{ decision.source }}</span>
-      {% else %}
-        <span class="pill pill-ok">{{ decision.source }}</span>
-      {% endif %}
-    </p>
-  {% else %}
-    <p class="muted">Noch keine Auswertung — wird beim nächsten Tick aktualisiert.</p>
-  {% endif %}
-</div>
-
-<div class="card">
   <h2>Jellyfin</h2>
   <div class="row">
     <div>
       <label>Polling</label>
       {% if polling_enabled %}
-        <span class="pill pill-ok">aktiv</span>
+        <span class="pill pill-ok">active</span>
       {% else %}
-        <span class="pill pill-bad">deaktiviert</span>
-        <p class="muted" style="margin:8px 0 0;font-size:13px">JELLYFIN_URL und JELLYFIN_API_KEY setzen, um Polling zu aktivieren.</p>
+        <span class="pill pill-bad">disabled</span>
+        <p class="muted" style="margin:8px 0 0;font-size:13px">Set JELLYFIN_URL and JELLYFIN_API_KEY to enable polling.</p>
       {% endif %}
     </div>
     <div>
-      <label>Aktive Streams</label>
+      <label>Active streams</label>
       <div style="font-size:20px;font-weight:600">{{ active_streams }}</div>
     </div>
   </div>
 </div>
 
-{% if decision %}
+{% if not decisions %}
+<div class="card"><p class="muted">No evaluation yet — updates on the next tick.</p></div>
+{% endif %}
+
+{% for key, d in decisions.items() %}
 <div class="card">
-  <h2>Auswertung dieses Ticks</h2>
+  <h2>{{ labels[key] }}
+    {% if runtime[key].reachable is sameas false %}
+      <span class="pill pill-bad" style="margin-left:8px">unreachable</span>
+    {% elif runtime[key].active %}
+      <span class="pill pill-ok" style="margin-left:8px">downloading</span>
+    {% else %}
+      <span class="pill pill-info" style="margin-left:8px">idle</span>
+    {% endif %}
+  </h2>
+
+  <div class="big">{{ units.format_limit(d.mode, d.value, line_kbps) }}</div>
+  <p class="muted" style="margin:8px 0 16px">
+    Reason:
+    {% if d.stream_share %}
+      <span class="pill pill-warn">{{ d.source }}</span>
+    {% elif "Rule" in d.source %}
+      <span class="pill pill-info">{{ d.source }}</span>
+    {% else %}
+      <span class="pill pill-ok">{{ d.source }}</span>
+    {% endif %}
+    {% if runtime[key].raw_kbps > 0 %}
+      · current speed {{ units.format_kbps(runtime[key].raw_kbps) }}
+    {% endif %}
+  </p>
+
   <table>
-    <thead><tr><th>Stufe</th><th>Quelle</th><th>Limit</th><th>=</th></tr></thead>
+    <thead><tr><th>Stage</th><th>Source</th><th>Limit</th><th>=</th></tr></thead>
     <tbody>
-      <tr {% if not decision.stream_override %}style="font-weight:600"{% endif %}>
+      <tr {% if not d.stream_share %}style="font-weight:600"{% endif %}>
         <td>Base</td>
-        <td>{{ decision.base.source }}</td>
-        <td>{{ units.format_limit(decision.base.mode, decision.base.value, line_kbps) }}</td>
-        <td class="muted">{{ units.format_kbps(decision.base.kbps) }}</td>
+        <td>{{ d.base.source }}</td>
+        <td>{{ units.format_limit(d.base.mode, d.base.value, line_kbps) }}</td>
+        <td class="muted">{{ units.format_kbps(d.base.kbps) }}</td>
       </tr>
-      {% if decision.stream_override %}
+      {% if d.stream_share %}
         <tr style="font-weight:600">
-          <td>Override</td>
-          <td>{{ decision.stream_override.source }}</td>
-          <td>{{ units.format_limit(decision.stream_override.mode, decision.stream_override.value, line_kbps) }}</td>
-          <td class="muted">{{ units.format_kbps(decision.stream_override.kbps) }}</td>
+          <td>{% if d.parked %}Parked{% else %}Budget share{% endif %}</td>
+          <td>{{ d.stream_share.source }}</td>
+          <td>{{ units.format_limit(d.stream_share.mode, d.stream_share.value, line_kbps) }}</td>
+          <td class="muted">{{ units.format_kbps(d.stream_share.kbps) }}</td>
         </tr>
       {% endif %}
     </tbody>
   </table>
-  <p class="muted" style="margin:12px 0 0;font-size:13px">
-    Logik: aktive Zeitregel ersetzt den Default. Streamt Jellyfin und das Stream-Limit ist niedriger, gewinnt es.
-  </p>
 
-  {% if decision.rule_candidates|length > 1 %}
-  <h3 style="margin:24px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Mehrere Regeln gleichzeitig aktiv — kleinste gewinnt</h3>
+  {% if d.rule_candidates|length > 1 %}
+  <h3 style="margin:24px 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Multiple rules active — lowest wins</h3>
   <table>
     <tbody>
-      {% for c in decision.rule_candidates %}
-        <tr {% if c.source == decision.base.source %}style="font-weight:600"{% endif %}>
+      {% for c in d.rule_candidates %}
+        <tr {% if c.source == d.base.source %}style="font-weight:600"{% endif %}>
           <td>{{ c.source }}</td>
           <td>{{ units.format_limit(c.mode, c.value, line_kbps) }}</td>
           <td class="muted">{{ units.format_kbps(c.kbps) }}</td>
@@ -80,6 +86,28 @@
     </tbody>
   </table>
   {% endif %}
+</div>
+{% endfor %}
+
+{% if active_streams > 0 and decisions %}
+<div class="card">
+  <h2>How the limit was decided</h2>
+  <p class="muted" style="margin:0;font-size:13px;line-height:1.7">
+    While Jellyfin is streaming, all downloaders share one bandwidth budget.
+    The budget is split among the downloaders that are actually downloading —
+    proportionally to their measured speed in <em>demand</em> mode, or evenly in
+    <em>equal</em> mode. A stricter time rule always wins over the budget share.
+  </p>
+</div>
+{% endif %}
+
+{% if not jd_configured %}
+<div class="card">
+  <h2>JDownloader</h2>
+  <p class="muted" style="margin:0;font-size:13px">
+    Not configured. Set MYJD_EMAIL, MYJD_PASSWORD and MYJD_DEVICE to throttle
+    JDownloader 2 through your MyJDownloader account.
+  </p>
 </div>
 {% endif %}
 

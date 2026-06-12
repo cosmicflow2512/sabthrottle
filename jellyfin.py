@@ -38,12 +38,11 @@ def fetch_sessions() -> list[dict[str, Any]] | None:
         return None
 
 
-def active_sessions(path_prefix: str = "") -> list[dict[str, Any]]:
+def filter_active(sessions: list[dict[str, Any]], path_prefix: str = "") -> list[dict[str, Any]]:
     """Return only sessions that are actively playing (have NowPlayingItem,
     not paused). Optionally filter by path prefix on the item path."""
-    sessions = fetch_sessions() or []
     out = []
-    for s in sessions:
+    for s in sessions or []:
         npi = s.get("NowPlayingItem")
         if not npi:
             continue
@@ -54,3 +53,8 @@ def active_sessions(path_prefix: str = "") -> list[dict[str, Any]]:
             continue
         out.append(s)
     return out
+
+
+def active_sessions(path_prefix: str = "") -> list[dict[str, Any]]:
+    """Legacy helper: fetch + filter, treating fetch errors as no streams."""
+    return filter_active(fetch_sessions() or [], path_prefix)

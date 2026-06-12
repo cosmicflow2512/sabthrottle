@@ -105,9 +105,13 @@ def sabnzbd_value(mode: str, value: float) -> str:
     SABnzbd natively understands percent ("50"), KB/s suffix ("K"), and
     MB/s suffix ("M"). We pass percent and MB/s through verbatim, and
     convert Mbit/s to KB/s.
+
+    Percent is clamped to 1..100 — SABnzbd interprets a bare number above
+    100 as an absolute KB/s value, so an unclamped "150" would throttle
+    to 150 KB/s instead of allowing 150 %.
     """
     if mode == MODE_PERCENT:
-        return str(int(round(float(value))))
+        return str(min(100, max(1, int(round(float(value))))))
     if mode == MODE_MB:
         return f"{value:g}M"
     if mode == MODE_MBIT:

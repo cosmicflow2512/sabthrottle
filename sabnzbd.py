@@ -96,3 +96,27 @@ def resume() -> bool:
     if ok:
         log.info("SABnzbd resumed")
     return ok
+
+
+def get_activity() -> tuple[bool, float]:
+    """Return (is_active, current_speed_kbps) from the queue endpoint.
+
+    Active means there is at least one item in the queue and the queue is
+    not paused. Speed is SABnzbd's reported kbpersec, used by the
+    demand-based budget split. Returns (False, 0.0) on API failure; the
+    caller's hysteresis bridges single failed polls.
+    """
+    data = _fetch_json("queue", limit="1")
+    if not data:
+        return False, 0.0
+    q = data.get("queue") or {}
+    try:
+        slots = int(q.get("noofslots_total") or q.get("noofslots") or 0)
+    except (TypeError, ValueError):
+        slots = 0
+    paused = bool(q.get("paused"))
+    try:
+        speed_kbps = float(q.get("kbpersec") or 0.0)
+    except (TypeError, ValueError):
+        speed_kbps = 0.0
+    return (slots > 0 and not paused), speed_kbps
